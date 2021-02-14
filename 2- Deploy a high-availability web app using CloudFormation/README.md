@@ -1,8 +1,6 @@
 # Project 1 - Deploy Static Website on AWS 
 
-![img-1](Deploy Static Website Project Diagram)
+![img-1](https://github.com/HazemAbdelmagid/AWS-Cloud-DevOps-Nano-Degree-Repo/blob/main/2-%20Deploy%20a%20high-availability%20web%20app%20using%20CloudFormation/HighAvailability-WebApp-Project-Diagram.png)
 
 ## URLs:
-Cloud Front Domain name: d2nhj9u76jdv17.cloudfront.net
-Website Endpoint: http://hosting-static-website-bucket-project-1.s3-website-us-east-1.amazonaws.com/
-S3 Object URL: http://hosting-static-website-bucket-project-1.s3-website-us-east-1.amazonaws.com/index.html
+Application Load Balancer URL: http://serve-webap-xqpn20dvxje5-1869083777.us-east-1.elb.amazonaws.com/
