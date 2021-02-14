@@ -1,0 +1,226 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >
+  This CloudFormation Script will be used to deploy the Servers infrastructure for High Availability 
+  Web Application.
+
+Parameters:
+
+  EnvironmentName:
+    Description: This is the Name for the Entire environment that we are going to deploy.
+    Type: String
+
+  AmiImage:
+    Description: This is the Id of the Image that will be used in the launch configuration template.
+    Type: String
+  
+  InstanceTypeconf:
+    Description: This is the Type of the instance that will be used in the launch configuration template.
+    Type: String
+
+Resources:
+  LBSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http traffic to our load balancer.
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-LoadBalancer-Security-Group"
+
+  WebServerSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to our hosts and SSH from local only.
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 0
+        ToPort: 65535
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-WebServers-Security-Group"
+  
+  EC2Role: 
+    Type: "AWS::IAM::Role"
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Principal: 
+              Service: 
+                - "ec2.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+      RoleName: UdacityS3ReadOnlyEC2
+
+  ProfileWithRolesForOurApp:
+    Type: AWS::IAM::InstanceProfile
+    DependsOn: EC2Role
+    Properties: 
+      Roles:
+        - UdacityS3ReadOnlyEC2
+
+# Key Name is provided in launch configuration template to be able to use the jump host to connect to the servers
+  WebAppLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    DependsOn: ProfileWithRolesForOurApp
+    Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo apt-get update -y
+          sudo apt-get install apache2 -y
+          sudo systemctl start apache2.service
+          sudo apt-get install awscli -y
+          aws s3 cp s3://udagramapp-bucket/index.html index.html
+          sudo cp index.html /var/www/html
+      ImageId: !Ref AmiImage
+      #KeyName: WebAppInstancesKeys
+      IamInstanceProfile: !Ref ProfileWithRolesForOurApp
+      SecurityGroups:
+      - Ref: WebServerSecGroup
+      InstanceType: !Ref InstanceTypeconf
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sdk"
+        Ebs:
+          VolumeSize: '10'
+  
+  WebAppGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+      - Fn::ImportValue: 
+          !Sub "${EnvironmentName}-PRIV-NETS"
+      LaunchConfigurationName:
+        Ref: WebAppLaunchConfig
+      MinSize: '2'
+      MaxSize: '6'
+      DesiredCapacity: '4'
+      TargetGroupARNs:
+      - Ref: WebAppTargetGroup
+
+  WebAppLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+      - Fn::ImportValue: !Sub "${EnvironmentName}-PUB1-SN"
+      - Fn::ImportValue: !Sub "${EnvironmentName}-PUB2-SN"
+      SecurityGroups:
+      - Ref: LBSecGroup
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: WebAppTargetGroup
+      LoadBalancerArn:
+        Ref: WebAppLB
+      Port: '80'
+      Protocol: HTTP
+
+  ALBListenerRule:
+      Type: AWS::ElasticLoadBalancingV2::ListenerRule
+      Properties:
+        Actions:
+        - Type: forward
+          TargetGroupArn: !Ref 'WebAppTargetGroup'
+        Conditions:
+        - Field: path-pattern
+          Values: [/]
+        ListenerArn: !Ref 'Listener'
+        Priority: 1
+
+  WebAppTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 8
+      HealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 5
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+
+  JumpHostSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH traffic to Jump Host only from my IP address.
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 156.218.93.57/32
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Jump Host Security Group"
+
+# To Use the Jump host we must uncomment the property keyname in the launch configuration template.
+  JumpHost: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref AmiImage
+      KeyName: Jump-box-private-subnets-keys
+      SubnetId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-PUB1-SN"
+      SecurityGroupIds: 
+      - Ref: JumpHostSecGroup
+      InstanceType: !Ref InstanceTypeconf
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sdk"
+          Ebs:
+            VolumeSize: '10'
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Jump Host"
+
+Outputs:
+  LoadBalancerURL:
+    Description: DNS Name for the Load Balancer.
+    Value: !Join [ "/", [ "http:/", !GetAtt WebAppLB.DNSName ]]
+    Export:
+      Name: !Sub "${EnvironmentName}-LoadBalancer-DNS-Name"

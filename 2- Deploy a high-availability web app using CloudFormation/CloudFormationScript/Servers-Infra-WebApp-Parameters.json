@@ -1,0 +1,14 @@
+[
+	{
+		"ParameterKey": "EnvironmentName",
+		"ParameterValue": "UdacityWebAppProject"
+	},
+    {
+		"ParameterKey": "AmiImage",
+		"ParameterValue": "ami-02fe94dee086c0c37"
+	},
+    {
+		"ParameterKey": "InstanceTypeconf",
+		"ParameterValue": "t3.medium"
+	}
+]
