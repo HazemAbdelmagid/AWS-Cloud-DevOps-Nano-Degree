@@ -1,0 +1,31 @@
+---
+
+- name: "Update the packages using apt-get"
+  become: yes
+  apt:
+    update_cache: yes
+
+- name: "Upgrade the packages"
+  become: yes
+  apt:
+    upgrade: safe
+
+- name: "Remove dependencies that are no longer required"
+  become: yes
+  apt:
+    autoremove: yes
+
+- name: "Install Nodejs version 13 in order to make the backend files run"
+  become: yes
+  shell: |
+    curl -sL https://deb.nodesource.com/setup_13.x | sudo -E bash - && sudo apt-get install -y nodejs
+  args:
+    warn: false
+
+- name: "install pm2"
+  become: yes
+  npm:
+    name: pm2
+    global: yes
+    production: yes
+    state: present

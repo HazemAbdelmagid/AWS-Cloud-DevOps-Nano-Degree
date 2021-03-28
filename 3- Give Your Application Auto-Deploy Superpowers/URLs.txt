@@ -1,0 +1,5 @@
+Public GitHub repository URL: https://github.com/HazemAbdelmagid/UdaPeople-CICD-Project
+Public URL for your S3 Bucket: http://udapeople-28dd0a4.s3-website-us-east-1.amazonaws.com/index.html#/employees
+Public URL for your CloudFront distribution: http://dupafc0mllrhy.cloudfront.net/#/employees
+Public URL for your back-end server in EC2: ec2-3-238-92-127.compute-1.amazonaws.com:3030/api/status
+Public URL to your Prometheus Server: http://ec2-3-219-217-205.compute-1.amazonaws.com:9090
