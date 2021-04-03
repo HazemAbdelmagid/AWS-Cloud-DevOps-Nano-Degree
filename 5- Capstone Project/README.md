@@ -5,7 +5,8 @@
 
 ## Project Overview
 
-The aim of Capstone Udacity project is to demonstrate Creating a docker image and implement it in kubernetes using Circleci pipeline.
+The aim of Capstone Udacity project is to use the skills acquired throughout Nano Degree journey to demonstrate Linting, Testing a simple Flask Web Application, Creating a docker image and push it towards AWS ECR then perform a rolling update on AWS EKS cluster, all these tasks performed using Circleci pipeline.
+
 In this project some of Circleci orbs have been used:
   -   circleci/aws-ecr@6.15.3
   -   circleci/aws-eks@0.2.3
