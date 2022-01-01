@@ -1,4 +1,4 @@
-# Project 1 - Deploy Static Website on AWS 
+# Project 2 - Deploy a high-availability web app using CloudFormation
 
 ![img-1](https://github.com/HazemAbdelmagid/AWS-Cloud-DevOps-Nano-Degree-Repo/blob/main/2-%20Deploy%20a%20high-availability%20web%20app%20using%20CloudFormation/HighAvailability-WebApp-Project-Diagram.png)
 
